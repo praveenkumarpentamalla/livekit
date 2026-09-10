@@ -1,0 +1,53 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    container_name: livekit-redis
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --save
+      - "60"
+      - "1"
+      - --loglevel
+      - warning
+
+    volumes:
+      - redis-data:/data
+
+    ports:
+      - "127.0.0.1:6379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    restart: unless-stopped
+
+    network_mode: host
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    volumes:
+      - ./config.yaml:/etc/livekit.yaml:ro
+
+    command:
+      - --config
+      - /etc/livekit.yaml
+
+    cpus: "2.0"
+    mem_limit: 2g
+
+
+volumes:
+  redis-data:
